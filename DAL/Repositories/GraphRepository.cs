@@ -3,24 +3,29 @@ using Gremlin.Net.Driver.Messages;
 using Gremlin.Net.Process;
 using Gremlin.Net.Structure;
 using System.Text;
+using System.Collections;
 
 namespace DAL.Repositories;
 
+public sealed record GraphVertex(string Id, string Label, IDictionary<string, object> Properties);
+
+public sealed record GraphEdge(string Id, string Label, string OutVertexId, string InVertexId, IDictionary<string, object> Properties);
+
 public interface IGraphRepository
 {
-    Task<Vertex> AddVertexAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default);
-    Task<Edge> AddEdgeAsync(string label, string outVertexId, string inVertexId, IDictionary<string, object>? properties = null, CancellationToken ct = default);
-    Task<Vertex?> GetVertexByIdAsync(string id, CancellationToken ct = default);
+    Task<GraphVertex> AddVertexAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default);
+    Task<GraphEdge> AddEdgeAsync(string label, string outVertexId, string inVertexId, IDictionary<string, object>? properties = null, CancellationToken ct = default);
+    Task<GraphVertex?> GetVertexByIdAsync(string id, CancellationToken ct = default);
     Task<bool> UpdateVertexPropertiesAsync(string id, IDictionary<string, object> properties, CancellationToken ct = default);
     Task<bool> DeleteVertexAsync(string id, CancellationToken ct = default);
     Task<long> CountVerticesAsync(CancellationToken ct = default);
-    Task<Edge?> AddEdgeByPropertyAsync(
+    Task<GraphEdge?> AddEdgeByPropertyAsync(
         string label,
         string outLabel, string outKey, object outValue,
         string inLabel, string inKey, object inValue,
         IDictionary<string, object>? properties = null,
         CancellationToken ct = default);
-    Task<Vertex> UpsertVertexByPropertyAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default);
+    Task<GraphVertex> UpsertVertexByPropertyAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default);
     Task<string?> AddVertexAndReturnIdAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default);
     Task<string?> UpsertVertexAndReturnIdAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default);
 }
@@ -61,7 +66,52 @@ internal sealed class GraphRepository : IGraphRepository
         return await _client.SubmitAsync<T>(message, ct);
     }
 
-    public async Task<Vertex> AddVertexAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default)
+    private static IDictionary<string, object> MaterializeProperties(object? input)
+    {
+        if (input is null)
+            return new Dictionary<string, object>();
+
+        if (input is IDictionary dict)
+        {
+            var result = new Dictionary<string, object>(StringComparer.Ordinal);
+            foreach (DictionaryEntry entry in dict)
+            {
+                var key = entry.Key?.ToString();
+                if (string.IsNullOrWhiteSpace(key))
+                    continue;
+
+                result[key] = entry.Value!;
+            }
+            return result;
+        }
+
+        // Some Gremlin.Net shapes can come back as arrays/enumerables of properties.
+        // Represent as a single "value" field rather than leaking Gremlin types.
+        return new Dictionary<string, object>(StringComparer.Ordinal)
+        {
+            ["value"] = input
+        };
+    }
+
+    private static GraphVertex ToGraphVertex(Vertex v)
+    {
+        var id = v.Id?.ToString() ?? string.Empty;
+        var props = MaterializeProperties(v.Properties);
+        return new GraphVertex(id, v.Label ?? string.Empty, props);
+    }
+
+    private static GraphEdge ToGraphEdge(Edge e)
+    {
+        var id = e.Id?.ToString() ?? string.Empty;
+        var outV = e.OutV?.Id?.ToString() ?? string.Empty;
+        var inV = e.InV?.Id?.ToString() ?? string.Empty;
+
+        var props = MaterializeProperties(e.Properties);
+
+        return new GraphEdge(id, e.Label ?? string.Empty, outV, inV, props);
+    }
+
+    public async Task<GraphVertex> AddVertexAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default)
     {
         var script = new StringBuilder("g.addV(label)");
         var bindings = new Dictionary<string, object> { ["label"] = label };
@@ -69,7 +119,7 @@ internal sealed class GraphRepository : IGraphRepository
         AppendProperties(script, bindings, properties);
 
         var result = await SubmitAsync<Vertex>(script.ToString(), bindings, ct);
-        return result.First();
+        return ToGraphVertex(result.First());
     }
 
     public async Task<string?> AddVertexAndReturnIdAsync(string label, IDictionary<string, object> properties, CancellationToken ct = default)
@@ -84,7 +134,7 @@ internal sealed class GraphRepository : IGraphRepository
         return result.FirstOrDefault()?.ToString();
     }
 
-    public async Task<Edge> AddEdgeAsync(string label, string outVertexId, string inVertexId, IDictionary<string, object>? properties = null, CancellationToken ct = default)
+    public async Task<GraphEdge> AddEdgeAsync(string label, string outVertexId, string inVertexId, IDictionary<string, object>? properties = null, CancellationToken ct = default)
     {
         var script = new StringBuilder("g.V(outId).addE(label).to(g.V(inId))");
         var bindings = new Dictionary<string, object>
@@ -97,13 +147,14 @@ internal sealed class GraphRepository : IGraphRepository
         AppendProperties(script, bindings, properties);
 
         var result = await SubmitAsync<Edge>(script.ToString(), bindings, ct);
-        return result.First();
+        return ToGraphEdge(result.First());
     }
 
-    public async Task<Vertex?> GetVertexByIdAsync(string id, CancellationToken ct = default)
+    public async Task<GraphVertex?> GetVertexByIdAsync(string id, CancellationToken ct = default)
     {
         var result = await SubmitAsync<Vertex>("g.V(id)", new Dictionary<string, object> { ["id"] = id }, ct);
-        return result.FirstOrDefault();
+        var v = result.FirstOrDefault();
+        return v is null ? null : ToGraphVertex(v);
     }
 
     public async Task<bool> UpdateVertexPropertiesAsync(string id, IDictionary<string, object> properties, CancellationToken ct = default)
@@ -130,7 +181,7 @@ internal sealed class GraphRepository : IGraphRepository
         return result.FirstOrDefault();
     }
 
-    public async Task<Edge?> AddEdgeByPropertyAsync(
+    public async Task<GraphEdge?> AddEdgeByPropertyAsync(
         string label,
         string outLabel, string outKey, object outValue,
         string inLabel, string inKey, object inValue,
@@ -152,10 +203,11 @@ internal sealed class GraphRepository : IGraphRepository
         AppendProperties(script, bindings, properties);
 
         var result = await SubmitAsync<Edge>(script.ToString(), bindings, ct);
-        return result.FirstOrDefault();
+        var e = result.FirstOrDefault();
+        return e is null ? null : ToGraphEdge(e);
     }
 
-    public async Task<Vertex> UpsertVertexByPropertyAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default)
+    public async Task<GraphVertex> UpsertVertexByPropertyAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default)
     {
         var script = new StringBuilder("g.V().has(lbl, propKey, propVal).fold().coalesce(unfold(), addV(lbl).property(propKey, propVal))");
         var bindings = new Dictionary<string, object>
@@ -168,7 +220,7 @@ internal sealed class GraphRepository : IGraphRepository
         AppendProperties(script, bindings, properties);
 
         var result = await SubmitAsync<Vertex>(script.ToString(), bindings, ct);
-        return result.First();
+        return ToGraphVertex(result.First());
     }
 
     public async Task<string?> UpsertVertexAndReturnIdAsync(string label, string key, object value, IDictionary<string, object> properties, CancellationToken ct = default)

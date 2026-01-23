@@ -29,7 +29,7 @@ namespace API.Controllers
         {
             var props = properties ?? new Dictionary<string, object>();
             var v = await _repo.AddVertexAsync(label, props);
-            return Ok(new { id = v.Id?.ToString(), label = v.Label, properties = v.Properties });
+            return Ok(new { id = v.Id, label = v.Label, properties = v.Properties });
         }
 
         // GET api/test/vertex/{id}
@@ -38,7 +38,7 @@ namespace API.Controllers
         {
             var v = await _repo.GetVertexByIdAsync(id);
             if (v == null) return NotFound();
-            return Ok(new { id = v.Id?.ToString(), label = v.Label, properties = v.Properties });
+            return Ok(new { id = v.Id, label = v.Label, properties = v.Properties });
         }
 
         // PATCH api/test/vertex/{id}
