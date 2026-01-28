@@ -64,8 +64,40 @@ public static class Constants
     {
         public const string Bundle = "Bundle";
         public const string Patient = "Patient";
+        public const string Practitioner = "Practitioner";
+        public const string Organization = "Organization";
+        public const string Location = "Location";
+        public const string Encounter = "Encounter";
+        public const string Observation = "Observation";
+        public const string Condition = "Condition";
+        public const string Procedure = "Procedure";
+        public const string MedicationRequest = "MedicationRequest";
+        public const string MedicationStatement = "MedicationStatement";
+        public const string DiagnosticReport = "DiagnosticReport";
+        public const string CarePlan = "CarePlan";
+        public const string AllergyIntolerance = "AllergyIntolerance";
+        public const string Immunization = "Immunization";
+        public const string DocumentReference = "DocumentReference";
+        public const string ServiceRequest = "ServiceRequest";
+        public const string Device = "Device";
+        public const string Specimen = "Specimen";
+        public const string Group = "Group";
+        public const string RelatedPerson = "RelatedPerson";
+        public const string Goal = "Goal";
+        public const string Task = "Task";
         public const string CapabilityStatement = "CapabilityStatement";
         public const string OperationOutcome = "OperationOutcome";
+
+        /// <summary>
+        /// Common resource types for reference target validation.
+        /// </summary>
+        public static readonly HashSet<string> CommonTypes = new(StringComparer.OrdinalIgnoreCase)
+        {
+            Patient, Practitioner, Organization, Location, Encounter,
+            Observation, Condition, Procedure, MedicationRequest, DiagnosticReport,
+            CarePlan, AllergyIntolerance, Immunization, DocumentReference,
+            ServiceRequest, Device, Specimen, Group, RelatedPerson
+        };
     }
 
     /// <summary>
@@ -198,12 +230,141 @@ public static class Constants
     }
 
     /// <summary>
-    /// FHIR search parameter names.
+    /// FHIR search parameter names (standard parameters that apply to all resources).
     /// </summary>
     public static class SearchParams
     {
         public const string Id = "_id";
+        public const string LastUpdated = "_lastUpdated";
+        public const string Tag = "_tag";
+        public const string Profile = "_profile";
+        public const string Security = "_security";
+        public const string Text = "_text";
+        public const string Content = "_content";
+        public const string List = "_list";
+        public const string Has = "_has";
+        public const string Type = "_type";
+        public const string Query = "_query";
+        public const string Filter = "_filter";
+        public const string Sort = "_sort";
+        public const string Count = "_count";
+        public const string Offset = "_offset";
+        public const string Include = "_include";
+        public const string RevInclude = "_revinclude";
+        public const string Summary = "_summary";
+        public const string Elements = "_elements";
+        public const string Contained = "_contained";
+        public const string ContainedType = "_containedType";
+        public const string Total = "_total";
+        public const string Score = "_score";
+
+        // Common resource search parameters
         public const string Identifier = "identifier";
+        public const string Name = "name";
+        public const string Family = "family";
+        public const string Given = "given";
+        public const string BirthDate = "birthdate";
+        public const string Gender = "gender";
+        public const string Active = "active";
+        public const string Status = "status";
+        public const string Code = "code";
+        public const string Category = "category";
+        public const string Subject = "subject";
+        public const string Patient = "patient";
+        public const string Encounter = "encounter";
+        public const string Performer = "performer";
+        public const string Author = "author";
+        public const string Date = "date";
+        public const string Effective = "effective";
+        public const string Issued = "issued";
+        public const string Authored = "authored";
+        public const string Onset = "onset";
+        public const string ValueQuantity = "value-quantity";
+        public const string Url = "url";
+        public const string Requester = "requester";
+        public const string Participant = "participant";
+        public const string Device = "device";
+        public const string RelatedPerson = "relatedperson";
+        public const string Practitioner = "practitioner";
+        public const string For = "for";
+    }
+
+    /// <summary>
+    /// FHIR search prefix (comparator) strings for ordered types.
+    /// </summary>
+    public static class SearchPrefixes
+    {
+        public const string Eq = "eq";
+        public const string Ne = "ne";
+        public const string Gt = "gt";
+        public const string Ge = "ge";
+        public const string Lt = "lt";
+        public const string Le = "le";
+        public const string Sa = "sa";
+        public const string Eb = "eb";
+        public const string Ap = "ap";
+
+        public static readonly string[] All = [Eq, Ne, Gt, Ge, Lt, Le, Sa, Eb, Ap];
+    }
+
+    /// <summary>
+    /// FHIR search modifier strings as used in query parameters.
+    /// </summary>
+    public static class SearchModifiers
+    {
+        public const string Above = "above";
+        public const string Below = "below";
+        public const string CodeText = "code-text";
+        public const string Contains = "contains";
+        public const string Exact = "exact";
+        public const string Identifier = "identifier";
+        public const string In = "in";
+        public const string Iterate = "iterate";
+        public const string Missing = "missing";
+        public const string Not = "not";
+        public const string NotIn = "not-in";
+        public const string OfType = "of-type";
+        public const string Text = "text";
+        public const string TextAdvanced = "text-advanced";
+    }
+
+    /// <summary>
+    /// FHIR Bundle link relation types for pagination.
+    /// </summary>
+    public static class LinkRelations
+    {
+        public const string Self = "self";
+        public const string First = "first";
+        public const string Previous = "previous";
+        public const string Next = "next";
+        public const string Last = "last";
+    }
+
+    /// <summary>
+    /// FHIR search entry mode values for Bundle.entry.search.mode.
+    /// </summary>
+    public static class SearchEntryMode
+    {
+        public const string Match = "match";
+        public const string Include = "include";
+        public const string Outcome = "outcome";
+    }
+
+    /// <summary>
+    /// FHIR compartment type names.
+    /// </summary>
+    public static class Compartments
+    {
+        public const string Patient = "Patient";
+        public const string Encounter = "Encounter";
+        public const string Practitioner = "Practitioner";
+        public const string Device = "Device";
+        public const string RelatedPerson = "RelatedPerson";
+
+        public static readonly HashSet<string> All = new(StringComparer.OrdinalIgnoreCase)
+        {
+            Patient, Encounter, Practitioner, Device, RelatedPerson
+        };
     }
 
     /// <summary>

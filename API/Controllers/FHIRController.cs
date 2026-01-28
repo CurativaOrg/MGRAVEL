@@ -56,10 +56,12 @@ namespace API.Controllers
     public class FHIRController : ControllerBase
     {
         private readonly FHIRService _service;
+        private readonly FhirSearchService _searchService;
 
-        public FHIRController(FHIRService service)
+        public FHIRController(FHIRService service, FhirSearchService searchService)
         {
             _service = service;
+            _searchService = searchService;
         }
 
         private string BaseUrl => $"{Request.Scheme}://{Request.Host}/api/fhir";
@@ -139,56 +141,55 @@ namespace API.Controllers
         /// <summary>
         /// search-system interaction - Search across all resource types.
         /// 
-        /// FHIR Spec: §3.2.0.11 search (https://build.fhir.org/http.html#search)
+        /// FHIR Spec: §3.2.1.2.4 (https://build.fhir.org/search.html#searchcontexts)
         /// 
         /// GET [base]?[parameters]
         /// 
         /// Parameters:
-        /// - _type: Comma-separated list of resource types to search
-        /// - _id: Filter by resource id
-        /// - _count: Maximum results per page
-        /// - _offset: Pagination offset
+        /// - _type: Comma-separated list of resource types to search (required if other params used)
+        /// - All standard search parameters (must be common to all searched types)
+        /// - All result modification parameters (_sort, _count, _offset, etc.)
+        /// 
+        /// Per spec §3.2.1.2.4: "If the _type parameter is included, all other search parameters 
+        /// SHALL be common to all provided types"
         /// 
         /// Returns: Bundle with type="searchset"
         /// </summary>
         [HttpGet]
-        public async Task<IActionResult> SearchSystem(
-            [FromQuery] string? _type = null,
-            [FromQuery] string? _id = null,
-            [FromQuery] int _count = 100,
-            [FromQuery] int _offset = 0,
-            CancellationToken ct = default)
+        public async Task<IActionResult> SearchSystem(CancellationToken ct = default)
         {
-            var filters = new Dictionary<string, object>();
-            if (!string.IsNullOrWhiteSpace(_id)) filters["id"] = _id;
+            var queryParams = Request.Query.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
 
-            var request = new SearchRequest(
-                ResourceTypes: string.IsNullOrEmpty(_type) ? null : _type.Split(',').ToList(),
-                Filters: filters.Count > 0 ? filters : null,
-                Limit: _count,
-                Offset: _offset);
-
-            var result = await _service.SearchResourcesAsync(request, SelfUrl, BaseUrl, ct);
+            var request = _searchService.ParseSearchParameters(null, queryParams);
+            var result = await _searchService.ExecuteSearchAsync(request, SelfUrl, BaseUrl, ct);
             return ToActionResult(result);
         }
 
         /// <summary>
         /// search-system via POST - Alternative POST-based system search.
         /// 
-        /// FHIR Spec: §3.2.0.11 (https://build.fhir.org/http.html#search)
+        /// FHIR Spec: §3.2.1.4 (https://build.fhir.org/search.html#transportprotocols)
         /// 
-        /// POST [base]/_search with form data
+        /// POST [base]/_search with form-urlencoded body
         /// 
         /// Per spec: "Servers supporting Search via HTTP SHALL support both modes of operation"
         /// </summary>
         [HttpPost("_search")]
-        public Task<IActionResult> SearchSystemPost(
-            [FromForm] string? _type = null,
-            [FromForm] string? _id = null,
-            [FromForm] int _count = 100,
-            [FromForm] int _offset = 0,
+        [Consumes("application/x-www-form-urlencoded")]
+        public async Task<IActionResult> SearchSystemPost(
+            [FromForm] IFormCollection form,
             CancellationToken ct = default)
-            => SearchSystem(_type, _id, _count, _offset, ct);
+        {
+            var queryParams = form.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
+
+            var request = _searchService.ParseSearchParameters(null, queryParams);
+            var result = await _searchService.ExecuteSearchAsync(request, SelfUrl, BaseUrl, ct);
+            return ToActionResult(result);
+        }
 
         /// <summary>
         /// history-system interaction - Retrieve change history for all resources.
@@ -344,46 +345,78 @@ namespace API.Controllers
         /// <summary>
         /// search-type interaction - Search resources of a specific type.
         /// 
-        /// FHIR Spec: §3.2.0.11 (https://build.fhir.org/http.html#search)
+        /// FHIR Spec: §3.2.1 (https://build.fhir.org/search.html)
         /// 
         /// GET [base]/[type]?[parameters]
+        /// 
+        /// Supports all FHIR search parameter types (§3.2.1.5):
+        /// - date: Date/time searches with prefixes (eq, ne, gt, ge, lt, le, sa, eb, ap)
+        /// - number: Numeric searches with prefixes
+        /// - quantity: Quantity searches with system|code
+        /// - reference: Reference searches with type modifiers and chaining
+        /// - string: String searches with :exact, :contains modifiers
+        /// - token: Code/identifier searches with system|code format
+        /// - uri: URI matching with :above, :below modifiers
+        /// 
+        /// Common search modifiers (§3.2.1.5.5):
+        /// - :missing - test for presence/absence of values
+        /// - :exact - exact string matching
+        /// - :contains - substring matching
+        /// - :not - negation
+        /// - :above/:below - hierarchical matching
+        /// - :in/:not-in - value set membership
+        /// 
+        /// Result modification parameters (§3.2.1.6):
+        /// - _sort: Sort results by parameter (prefix with - for descending)
+        /// - _count: Limit page size
+        /// - _offset: Pagination offset
+        /// - _summary: Return summary view
+        /// - _elements: Include only specified elements
+        /// - _include/_revinclude: Include referenced resources
         /// 
         /// Returns: Bundle with type="searchset"
         /// </summary>
         [HttpGet("{resourceType}")]
         public async Task<IActionResult> SearchType(
             [FromRoute] string resourceType,
-            [FromQuery] string? _id = null,
-            [FromQuery] string? identifier = null,
-            [FromQuery] int _count = 100,
-            [FromQuery] int _offset = 0,
             CancellationToken ct = default)
         {
-            var filters = new Dictionary<string, object>();
-            if (!string.IsNullOrWhiteSpace(_id)) filters["id"] = _id;
-            if (!string.IsNullOrWhiteSpace(identifier)) filters["identifier"] = identifier;
+            var queryParams = Request.Query.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
 
-            var request = new SearchRequest(resourceType, Filters: filters.Count > 0 ? filters : null, Limit: _count, Offset: _offset);
-            var result = await _service.SearchResourcesAsync(request, SelfUrl, BaseUrl, ct);
+            var request = _searchService.ParseSearchParameters(resourceType, queryParams);
+            var result = await _searchService.ExecuteSearchAsync(request, SelfUrl, BaseUrl, ct);
             return ToActionResult(result);
         }
 
         /// <summary>
         /// search-type via POST - Alternative POST-based type search.
         /// 
-        /// FHIR Spec: §3.2.0.11 (https://build.fhir.org/http.html#search)
+        /// FHIR Spec: §3.2.1.4 (https://build.fhir.org/search.html#transportprotocols)
         /// 
-        /// POST [base]/[type]/_search with form data
+        /// POST [base]/[type]/_search with form-urlencoded body
+        /// 
+        /// Per spec: "Servers SHALL support both POST and GET for search"
+        /// 
+        /// This allows searches with long parameter lists or sensitive data
+        /// that shouldn't appear in URLs.
         /// </summary>
         [HttpPost("{resourceType}/_search")]
-        public Task<IActionResult> SearchTypePost(
+        [Consumes("application/x-www-form-urlencoded")]
+        public async Task<IActionResult> SearchTypePost(
             [FromRoute] string resourceType,
-            [FromForm] string? _id = null,
-            [FromForm] string? identifier = null,
-            [FromForm] int _count = 100,
-            [FromForm] int _offset = 0,
+            [FromForm] IFormCollection form,
             CancellationToken ct = default)
-            => SearchType(resourceType, _id, identifier, _count, _offset, ct);
+        {
+            var queryParams = form.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
+
+            var request = _searchService.ParseSearchParameters(resourceType, queryParams);
+            var result = await _searchService.ExecuteSearchAsync(request, SelfUrl, BaseUrl, ct);
+            return ToActionResult(result);
+        }
 
         #endregion
 
@@ -688,6 +721,73 @@ namespace API.Controllers
             CancellationToken ct = default)
         {
             var result = await _service.GetPatientEverythingBundleAsync(patientId, _count, BaseUrl, ct);
+            return ToActionResult(result);
+        }
+
+        #endregion
+
+        #region Compartment Search
+
+        /// <summary>
+        /// Compartment search interaction - Search resources within a compartment.
+        /// 
+        /// FHIR Spec: §3.2.1.2.4 (https://build.fhir.org/search.html#searchcontexts)
+        /// 
+        /// GET [base]/[compartment]/[id]/[type]?[parameters]
+        /// 
+        /// Searches for resources of [type] that are within the compartment defined by
+        /// [compartment]/[id]. For example, searching for all Observations for a Patient.
+        /// 
+        /// Common compartments:
+        /// - Patient: Resources directly associated with a patient
+        /// - Encounter: Resources linked to an encounter
+        /// - Practitioner: Resources associated with a practitioner
+        /// - Device: Resources associated with a device
+        /// - RelatedPerson: Resources associated with a related person
+        /// 
+        /// The outcome is the same as the equivalent type search but filtered by
+        /// compartment membership. Full URLs in results are NOT compartment-specific.
+        /// 
+        /// Note: The literal '*' is valid as [type] for searching all types.
+        /// 
+        /// Returns: Bundle with type="searchset"
+        /// </summary>
+        [HttpGet("{compartmentType}/{compartmentId}/{resourceType}")]
+        public async Task<IActionResult> CompartmentSearch(
+            [FromRoute] string compartmentType,
+            [FromRoute] string compartmentId,
+            [FromRoute] string resourceType,
+            CancellationToken ct = default)
+        {
+            var queryParams = Request.Query.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
+
+            var result = await _searchService.ExecuteCompartmentSearchAsync(
+                compartmentType, compartmentId, resourceType, queryParams, SelfUrl, BaseUrl, ct);
+            return ToActionResult(result);
+        }
+
+        /// <summary>
+        /// Compartment search via POST - Alternative POST-based compartment search.
+        /// 
+        /// POST [base]/[compartment]/[id]/[type]/_search
+        /// </summary>
+        [HttpPost("{compartmentType}/{compartmentId}/{resourceType}/_search")]
+        [Consumes("application/x-www-form-urlencoded")]
+        public async Task<IActionResult> CompartmentSearchPost(
+            [FromRoute] string compartmentType,
+            [FromRoute] string compartmentId,
+            [FromRoute] string resourceType,
+            [FromForm] IFormCollection form,
+            CancellationToken ct = default)
+        {
+            var queryParams = form.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.ToString());
+
+            var result = await _searchService.ExecuteCompartmentSearchAsync(
+                compartmentType, compartmentId, resourceType, queryParams, SelfUrl, BaseUrl, ct);
             return ToActionResult(result);
         }
 

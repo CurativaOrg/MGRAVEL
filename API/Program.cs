@@ -39,6 +39,7 @@ builder.Services.AddScoped<FhirConditionalService>();
 builder.Services.AddScoped<FhirVersioningService>();
 builder.Services.AddScoped<FhirBundleService>();
 builder.Services.AddScoped<FhirPatientService>();
+builder.Services.AddScoped<FhirSearchService>();  // FHIR Search implementation per §3.2.1
 builder.Services.AddScoped<FHIRService>();
 builder.Services.AddScoped<GraphOpsService>();
 builder.Services.AddScoped<TestOpsService>();
