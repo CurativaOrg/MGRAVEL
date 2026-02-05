@@ -1,3 +1,4 @@
+using BLL.Options;
 using BLL.Services;
 using DAL;
 using DAL.Persistence;
@@ -31,6 +32,10 @@ builder.Services.AddJanusGraph(o =>
     o.MaxInProcessPerConnection = 64;
 });
 
+// SNOMED CT Configuration
+builder.Services.Configure<SnomedOptions>(
+    builder.Configuration.GetSection(SnomedOptions.SectionName));
+
 // BLL Services
 builder.Services.AddSingleton<FhirValidationService>(); // Stateless, only loads schema once
 builder.Services.AddScoped<FhirReferenceService>();
@@ -43,6 +48,10 @@ builder.Services.AddScoped<FhirSearchService>();  // FHIR Search implementation 
 builder.Services.AddScoped<FHIRService>();
 builder.Services.AddScoped<GraphOpsService>();
 builder.Services.AddScoped<TestOpsService>();
+
+// SNOMED CT Services
+builder.Services.AddSingleton<SnomedCheckpointManager>(); // Singleton to maintain checkpoint state
+builder.Services.AddScoped<SnomedSeederService>();
 
 var app = builder.Build();
 

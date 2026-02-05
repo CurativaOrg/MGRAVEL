@@ -24,4 +24,13 @@
     <ProjectReference Include="..\DAL\DAL.csproj" />
   </ItemGroup>
 
+  <!-- SNOMED CT import directory - linked as content, not copied -->
+  <!-- Files are accessed from the solution root via relative path -->
+  <ItemGroup>
+    <None Include="..\snomed-data\import\**\*" Link="snomed-data\import\%(RecursiveDir)%(Filename)%(Extension)">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+      <Visible>true</Visible>
+    </None>
+  </ItemGroup>
+
 </Project>

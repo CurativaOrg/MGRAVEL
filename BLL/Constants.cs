@@ -383,4 +383,219 @@ public static class Constants
         public const string Match = "match";
         public const string Token = "token";
     }
+
+    /// <summary>
+    /// SNOMED CT terminology constants.
+    /// Per SNOMED International: https://www.snomed.org/
+    /// </summary>
+    public static class Snomed
+    {
+        /// <summary>
+        /// FHIR system URI for SNOMED CT codes.
+        /// </summary>
+        public const string SystemUri = "http://snomed.info/sct";
+
+        /// <summary>
+        /// SNOMED CT International Edition module ID.
+        /// </summary>
+        public const string ModuleInternational = "900000000000207008";
+
+        /// <summary>
+        /// Description type IDs for identifying FSN vs synonyms.
+        /// </summary>
+        public static class DescriptionTypes
+        {
+            /// <summary>Fully Specified Name type ID.</summary>
+            public const string Fsn = "900000000000003001";
+
+            /// <summary>Synonym type ID.</summary>
+            public const string Synonym = "900000000000013009";
+        }
+
+        /// <summary>
+        /// Language refset IDs for preferred term resolution.
+        /// </summary>
+        public static class LanguageRefsets
+        {
+            /// <summary>US English language refset.</summary>
+            public const string UsEnglish = "900000000000509007";
+
+            /// <summary>GB English language refset.</summary>
+            public const string GbEnglish = "900000000000508004";
+        }
+
+        /// <summary>
+        /// Acceptability IDs for language refset entries.
+        /// </summary>
+        public static class Acceptability
+        {
+            /// <summary>Preferred term acceptability.</summary>
+            public const string Preferred = "900000000000548007";
+
+            /// <summary>Acceptable (but not preferred) acceptability.</summary>
+            public const string Acceptable = "900000000000549004";
+        }
+
+        /// <summary>
+        /// Characteristic type IDs for relationships.
+        /// </summary>
+        public static class CharacteristicTypes
+        {
+            /// <summary>Inferred relationship (computed by classifier).</summary>
+            public const string Inferred = "900000000000011006";
+
+            /// <summary>Stated relationship (authored).</summary>
+            public const string Stated = "900000000000010007";
+        }
+
+        /// <summary>
+        /// Common SNOMED CT relationship type concept IDs.
+        /// </summary>
+        public static class RelationshipTypes
+        {
+            /// <summary>Is-A relationship (subsumption hierarchy).</summary>
+            public const string IsA = "116680003";
+
+            /// <summary>Finding site attribute.</summary>
+            public const string FindingSite = "363698007";
+
+            /// <summary>Associated morphology attribute.</summary>
+            public const string AssociatedMorphology = "116676008";
+
+            /// <summary>Causative agent attribute.</summary>
+            public const string CausativeAgent = "246075003";
+
+            /// <summary>Has active ingredient attribute.</summary>
+            public const string HasActiveIngredient = "127489000";
+
+            /// <summary>Method attribute.</summary>
+            public const string Method = "260686004";
+
+            /// <summary>Direct substance attribute.</summary>
+            public const string DirectSubstance = "363701004";
+        }
+
+        /// <summary>
+        /// Common SNOMED CT hierarchy root concepts.
+        /// </summary>
+        public static class Hierarchies
+        {
+            /// <summary>SNOMED CT root concept.</summary>
+            public const string Root = "138875005";
+
+            /// <summary>Clinical finding hierarchy root.</summary>
+            public const string ClinicalFinding = "404684003";
+
+            /// <summary>Procedure hierarchy root.</summary>
+            public const string Procedure = "71388002";
+
+            /// <summary>Observable entity hierarchy root.</summary>
+            public const string Observable = "363787002";
+
+            /// <summary>Body structure hierarchy root.</summary>
+            public const string BodyStructure = "123037004";
+
+            /// <summary>Substance hierarchy root.</summary>
+            public const string Substance = "105590001";
+
+            /// <summary>Pharmaceutical/biologic product hierarchy root.</summary>
+            public const string Pharmaceutical = "373873005";
+        }
+    }
+
+    /// <summary>
+    /// Clinical graph vertex labels for SNOMED CT terminology and clinical instances.
+    /// </summary>
+    public static class ClinicalLabels
+    {
+        /// <summary>SNOMED CT concept vertex.</summary>
+        public const string SnomedConcept = "SnomedConcept";
+
+        /// <summary>Clinical instance vertex (patient-scoped occurrence).</summary>
+        public const string ClinicalInstance = "ClinicalInstance";
+
+        /// <summary>Clinical attribute-value pair vertex.</summary>
+        public const string ClinicalAttributeValue = "ClinicalAttributeValue";
+    }
+
+    /// <summary>
+    /// Clinical graph edge labels.
+    /// </summary>
+    public static class ClinicalEdges
+    {
+        /// <summary>SNOMED CT IS-A hierarchy edge.</summary>
+        public const string IsA = "IS_A";
+
+        /// <summary>Non-IS-A defining relationship edge.</summary>
+        public const string DefiningRel = "DEFINING_REL";
+
+        /// <summary>Patient to clinical instance ownership edge.</summary>
+        public const string HasInstance = "HAS_INSTANCE";
+
+        /// <summary>Clinical instance to SNOMED CT concept binding edge.</summary>
+        public const string InstanceOf = "INSTANCE_OF";
+
+        /// <summary>Clinical instance to attribute-value association edge.</summary>
+        public const string HasAttribute = "HAS_ATTRIBUTE";
+
+        /// <summary>Attribute-value to SNOMED CT concept type edge.</summary>
+        public const string AttributeType = "ATTRIBUTE_TYPE";
+
+        /// <summary>Clinical instance derivation chain edge.</summary>
+        public const string DerivedFrom = "DERIVED_FROM";
+
+        /// <summary>Clinical instance to source FHIR resource provenance edge.</summary>
+        public const string Provenance = "PROVENANCE";
+    }
+
+    /// <summary>
+    /// Clinical graph property keys.
+    /// </summary>
+    public static class ClinicalProperties
+    {
+        // Terminology properties
+        /// <summary>SNOMED CT concept ID.</summary>
+        public const string ConceptId = "conceptId";
+
+        /// <summary>Fully Specified Name.</summary>
+        public const string Fsn = "fsn";
+
+        /// <summary>Preferred term for display.</summary>
+        public const string PreferredTerm = "preferredTerm";
+
+        /// <summary>Concept active status.</summary>
+        public const string Active = "active";
+
+        /// <summary>SNOMED CT module identifier.</summary>
+        public const string ModuleId = "moduleId";
+
+        /// <summary>RF2 effective date (YYYYMMDD).</summary>
+        public const string EffectiveTime = "effectiveTime";
+
+        /// <summary>Relationship type concept ID (for DEFINING_REL edges).</summary>
+        public const string RelationshipTypeId = "relationshipTypeId";
+
+        // Clinical instance properties
+        /// <summary>Unique clinical instance identifier.</summary>
+        public const string InstanceId = "instanceId";
+
+        /// <summary>Clinical observation timestamp.</summary>
+        public const string ObservedAt = "observedAt";
+
+        /// <summary>SNOMED CT version used for normalization.</summary>
+        public const string TerminologyVersion = "terminologyVersion";
+
+        /// <summary>Flag indicating semantic normalization could not be completed.</summary>
+        public const string SemanticallyUnresolved = "semanticallyUnresolved";
+
+        // Attribute value properties
+        /// <summary>Numeric or string value.</summary>
+        public const string Value = "value";
+
+        /// <summary>UCUM unit code.</summary>
+        public const string Unit = "unit";
+
+        /// <summary>Comparator for range values.</summary>
+        public const string Comparator = "comparator";
+    }
 }

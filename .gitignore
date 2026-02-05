@@ -2,6 +2,9 @@
 ## Except I may add or remove lines for my own convenience.
 ## My additions will be here at the top:
 
+# Snomed data (We are not licensed to redistribute)
+snomed-data/
+
 # Visual Studio 2022 detritus
 .vs/
 

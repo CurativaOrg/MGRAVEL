@@ -1,12 +1,14 @@
+version: "3.8"
+
 services:
   cassandra:
     image: cassandra:3.11
-    container_name: janus_cassandra
-    ports: ["9042:9042"]
+    ports:
+      - "9042:9042"
     volumes:
       - cassandra-data:/var/lib/cassandra
     healthcheck:
-      test: ["CMD-SHELL","cqlsh -u cassandra -p cassandra -e 'describe cluster' || exit 1"]
+      test: ["CMD-SHELL", "cqlsh -u cassandra -p cassandra -e 'describe cluster' || exit 1"]
       interval: 10s
       retries: 10
     restart: unless-stopped
@@ -14,15 +16,22 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.13
     environment:
-      - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms512m -Xmx1g
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms512m -Xmx1g"
+      xpack.security.enabled: "false"
+      ingest.geoip.downloader.enabled: "false"
     ulimits:
       memlock:
         soft: -1
         hard: -1
-    ports: ["9200:9200"]
+    ports:
+      - "9200:9200"
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:9200 || exit 1"]
+      interval: 10s
+      retries: 10
     restart: unless-stopped
 
   janusgraph:
@@ -31,11 +40,16 @@ services:
       cassandra:
         condition: service_healthy
       elasticsearch:
-        condition: service_started
+        condition: service_healthy
     environment:
       JANUS_PROPS_TEMPLATE: cql-es
-    ports: ["8182:8182"]
+      GRAPH_UNIQUE_INSTANCE_ID_SUFFIX: 1
+      JANUSGRAPH_ES_HOSTNAME: elasticsearch
+      JANUSGRAPH_ES_PORT: 9200
+    ports:
+      - "8182:8182"
     restart: unless-stopped
+    stop_grace_period: 30s
 
 volumes:
   cassandra-data:
